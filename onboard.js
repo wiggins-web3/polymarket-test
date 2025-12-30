@@ -26,6 +26,11 @@ async function main() {
     try {
         // Step 3: Derive API Key (L1 签名)
         // 这个步骤会触发 EIP-712 签名，生成 API 凭证
+        console.log("正在检查 RPC 连接...");
+        const network = await provider.getNetwork();
+        console.log("已连接至网络:", network.name);
+        console.log("已连接至网络:", network.chainId);
+
         console.log('正在生成 API Key (请等待签名)...');
         const creds = await client.deriveApiKey();
 

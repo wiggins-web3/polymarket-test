@@ -1,0 +1,10 @@
+name = "polymarket-worker"
+main = "src/index.js"
+compatibility_date = "2024-03-20"
+[observability]
+enabled = true
+
+
+[vars]
+RPC_URL = "https://polygon-rpc.com"
+
