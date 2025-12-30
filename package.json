@@ -1,12 +1,24 @@
 {
-  "name": "test",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": ""
-}
+    "name": "polymarket-test",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+      "@polymarket/clob-client": "^4.0.0",
+      "@polymarket/sdk": "^1.0.0",
+      "dotenv": "^16.0.0",
+      "ethers": "^6.0.0"
+    },
+    "devDependencies": {
+      "@types/node": "^20.0.0",
+      "ts-node": "^10.0.0",
+      "typescript": "^5.0.0"
+    }
+  }
+  
