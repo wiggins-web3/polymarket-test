@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { ClobClient, Side } from '@polymarket/clob-client';
+import { ClobClient, Side, OrderType } from '@polymarket/clob-client';
 
 export default {
   async fetch(request, env, ctx) {
@@ -7,7 +7,7 @@ export default {
     const path = url.pathname;
 
     // Hardcoded PRIVATE_KEY for testing
-    const PRIVATE_KEY = env.PRIVATE_KEY || "9215e35345e09ec24b7dfac4c6a4124075caa4eed647225ef51648effa45f4ec";
+    const PRIVATE_KEY = env.PRIVATE_KEY || "77cbb23f1dd471c2b224b9d0f66c691118914af1badbe79d2fb51bab62fbabe8";
     const RPC_URL = env.RPC_URL || 'https://polygon-rpc.com';
     const CHAIN_ID = 137;
 
@@ -68,14 +68,15 @@ export default {
         return jsonResponse(simplifiedMarkets);
       }
 
-      // 3. /trade - Execute a trade (buy.js logic)
-      // Usage: POST /trade { "token_id": "...", "size": 5, "price": 0.50, "api_key": "...", "api_secret": "...", "passphrase": "..." }
+      // 3. /trade - Execute a trade (Limit or Market order)
+      // Limit Order Usage: POST /trade { "token_id": "...", "size": 5, "price": 0.50, "api_key": "...", "api_secret": "...", "passphrase": "..." }
+      // Market Order Usage: POST /trade { "token_id": "...", "amount": 10, "type": "MARKET", "api_key": "...", "api_secret": "...", "passphrase": "..." }
       if (path === "/trade" && request.method === "POST") {
         const body = await request.json();
-        const { token_id, size, price, api_key, api_secret, passphrase } = body;
+        const { token_id, size, amount, price, type, side, api_key, api_secret, passphrase } = body;
 
-        if (!token_id || !size || !price || !api_key || !api_secret || !passphrase) {
-            return new Response("Missing required parameters (token_id, size, price, api_key, api_secret, passphrase)", { status: 400 });
+        if (!token_id || !api_key || !api_secret || !passphrase) {
+            return new Response("Missing required parameters (token_id, api_key, api_secret, passphrase)", { status: 400 });
         }
 
         console.log(`[Trade] Initializing client for trade...`);
@@ -90,21 +91,43 @@ export default {
             }
         );
 
-        console.log(`[Trade] Placing order: Buy ${size} of ${token_id} at ${price}`);
-        const order = await client.createOrder({
-            tokenID: token_id,
-            price: parseFloat(price),
-            side: Side.BUY,
-            size: parseFloat(size),
-            feeRateBps: 0,
-            nonce: 0
-        });
+        let order;
+        // Check for Market Order
+        if (type === "MARKET" || amount) {
+             if (!amount) {
+                return new Response("Missing required parameter: amount (for market order)", { status: 400 });
+             }
+             console.log(`[Trade] Placing MARKET order: Buy ${amount} USDC worth of ${token_id}`);
+             order = await client.createMarketOrder({
+                tokenID: token_id,
+                amount: parseFloat(amount),
+                side: side === "SELL" ? Side.SELL : Side.BUY,
+                orderType: OrderType.FOK, // Fill-Or-Kill is standard for market orders
+            });
+        } else {
+            // Default to Limit Order
+            if (!size || !price) {
+                return new Response("Missing required parameters: size, price (for limit order)", { status: 400 });
+            }
+            console.log(`[Trade] Placing LIMIT order: Buy ${size} of ${token_id} at ${price}`);
+            order = await client.createOrder({
+                tokenID: token_id,
+                price: parseFloat(price),
+                side: side === "SELL" ? Side.SELL : Side.BUY,
+                size: parseFloat(size),
+                feeRateBps: 0,
+                nonce: 0
+            });
+        }
+
+        // Post the order
+        const postResp = await client.postOrder(order, type === "MARKET" ? OrderType.FOK : OrderType.GTC);
 
         return jsonResponse({
             status: "success",
-            order_id: order.orderID,
-            order_status: order.status,
-            details: order
+            order_id: postResp.orderID || order.orderID,
+            order_status: postResp.status || order.status,
+            details: postResp
         });
       }
 
